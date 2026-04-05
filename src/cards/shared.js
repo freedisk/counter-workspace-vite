@@ -37,7 +37,8 @@ export function buildCardShell({ card, id, type, accent, opts, nextColorIdx }) {
     <div class="buttons">
       <button class="btn-xs" data-action="clone-${type}">${cloneDot} Cloner</button>
       <button class="btn-xs btn-remove" data-action="remove">Supprimer</button>
-    </div>`;
+    </div>
+    <div class="resize-handle" aria-label="Redimensionner la carte">⤡</div>`;
 
   return { handleHTML, labelHTML, nameHTML, bottomHTML };
 }

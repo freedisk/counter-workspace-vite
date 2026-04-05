@@ -36,7 +36,9 @@ export function saveState() {
       count: c.dataset.count,
       name: nameEl ? nameEl.textContent : '',
       left: c.style.left,
-      top: c.style.top
+      top: c.style.top,
+      width: c.style.width || '',
+      height: c.style.height || ''
     };
     if (c.dataset.pomodoroConfig) entry.pomodoroConfig = JSON.parse(c.dataset.pomodoroConfig);
     if (c.dataset.diceMode) {
@@ -64,6 +66,8 @@ export function undo() {
   snap.forEach(s => {
     _setNextColorIdx(Math.max(0, ACCENT_COLORS.indexOf(s.accent)));
     const opts = { startVal: parseInt(s.count) || 0, left: s.left, top: s.top, name: s.name, skipSave: true };
+    if (s.width) opts.width = s.width;
+    if (s.height) opts.height = s.height;
     if (s.pomodoroConfig) opts.pomodoroConfig = s.pomodoroConfig;
     if (s.diceMode) { opts.diceMode = s.diceMode; opts.diceFaces = s.diceFaces; opts.diceLabels = s.diceLabels; }
     if (s.hotkey) opts.hotkey = s.hotkey;
@@ -90,7 +94,9 @@ export function saveWorkspace() {
       accent: c.dataset.accent,
       count: c.dataset.count,
       left: c.style.left,
-      top: c.style.top
+      top: c.style.top,
+      width: c.style.width || '',
+      height: c.style.height || ''
     };
     if (c.dataset.type === 'pomodoro' && c.dataset.pomodoroConfig) {
       entry.pomodoroConfig = JSON.parse(c.dataset.pomodoroConfig);
@@ -123,6 +129,8 @@ export function loadWorkspace() {
         name: s.name,
         skipSave: true
       };
+      if (s.width) opts.width = s.width;
+      if (s.height) opts.height = s.height;
       if (s.pomodoroConfig) opts.pomodoroConfig = s.pomodoroConfig;
       if (s.diceMode) { opts.diceMode = s.diceMode; opts.diceFaces = s.diceFaces; opts.diceLabels = s.diceLabels; }
       if (s.hotkey) opts.hotkey = s.hotkey;

@@ -6,6 +6,7 @@ import { toggleDropdown, closeDropdowns, organizeGrid, organizeRow, organizeStac
 import { saveState, undo, scheduleSave, loadWorkspace, initPersistence } from './persistence.js';
 import { positionCard, bindRemove, buildCardShell } from './cards/shared.js';
 import { bindDrag } from './drag.js';
+import { bindResize } from './resize.js';
 
 import buildCounter from './cards/counter.js';
 import buildStopwatch from './cards/stopwatch.js';
@@ -58,6 +59,8 @@ function createCard(type, opts = {}) {
   card.setAttribute('aria-label', `${type} — ${opts.name || 'sans nom'}`);
 
   positionCard(card, opts, id);
+  if (opts.width) card.style.width = opts.width;
+  if (opts.height) card.style.height = opts.height;
 
   const labels = { counter: 'Compteur', stopwatch: 'Chronomètre', countdown: 'Rebours', pomodoro: 'Pomodoro', dice: 'Dé', timer: 'Timer' };
 
@@ -73,6 +76,7 @@ function createCard(type, opts = {}) {
   else if (type === 'timer') buildTimer(card, id, accent, opts, handleHTML, labelHTML, nameHTML, bottomHTML);
 
   bindDrag(card);
+  bindResize(card);
   bindRemove(card);
   card.querySelector(`[data-action="clone-${type}"]`).addEventListener('click', () => createCard(type));
 
