@@ -31,6 +31,7 @@ src/
 ├── style.css           # All CSS (imported by main.js)
 ├── theme.js            # setTheme(), toggleMode(), restoreTheme(), exports currentTheme/isLight
 ├── drag.js             # Global drag system (currentDragCard, document listeners), exports bindDrag()
+├── resize.js           # Global resize system (resize handle, min constraints), exports bindResize()
 ├── toolbar.js          # toggleDropdown(), closeDropdowns(), organizeGrid/Row/Stack/Grouped
 ├── persistence.js      # saveState(), scheduleSave(), saveWorkspace(), loadWorkspace(), undo()
 ├── utils.js            # fmtTime(), bindHold(), updateContainerHeight(), ACCENT_COLORS
@@ -47,7 +48,8 @@ src/
 ## Module Dependencies
 
 ```
-main.js ──→ style.css, theme.js, drag.js, toolbar.js, persistence.js, utils.js, cards/*
+main.js ──→ style.css, theme.js, drag.js, resize.js, toolbar.js, persistence.js, utils.js, cards/*
+resize.js ──→ persistence.js (scheduleSave), utils.js (updateContainerHeight)
 toolbar.js ──→ persistence.js (saveState), utils.js (updateContainerHeight)
 drag.js ──→ persistence.js (scheduleSave), utils.js (updateContainerHeight)
 persistence.js ──→ utils.js (ACCENT_COLORS, updateContainerHeight), theme.js (currentTheme, isLight, setTheme, toggleMode)
@@ -75,6 +77,7 @@ cards/dice.js ──→ (no imports)
 ## Shared Features (all cards)
 
 - Drag handle (top-left, 6-dot grid)
+- Resize handle (bottom-right, `⤡`) — drag to resize, min 220×180px
 - Editable name (`contenteditable`)
 - Clone / Remove buttons
 - Card type label (top-right)
@@ -92,6 +95,7 @@ cards/dice.js ──→ (no imports)
 - `scheduleSave()` — debounce 300ms then `saveWorkspace()` (persistence.js)
 - `saveWorkspace()` / `loadWorkspace()` — localStorage persistence (persistence.js)
 - `bindDrag(card)` — sets `currentDragCard` for global drag handler (drag.js)
+- `bindResize(card)` — sets up resize handle for global resize handler (resize.js)
 - `bindHold(el, onStep)` — hold-to-repeat with acceleration (utils.js)
 - `fmtTime(ms)` — format milliseconds to mm:ss.cs or h:mm:ss (utils.js)
 - `updateContainerHeight()` — recalculates `#container` min-height (utils.js)
@@ -102,10 +106,11 @@ cards/dice.js ──→ (no imports)
 
 - All colors use CSS variables for theme compatibility
 - New card types must: add CSS in `style.css`, add `buildXxx()` in `src/cards/`, register in `createCard` if/else in `main.js` + labels/placeholders, add to "Ajouter" dropdown in `index.html`, update `organizeGrouped` types array in `toolbar.js`
-- Undo snapshots must include any card-specific config (e.g., `pomodoroConfig`, `diceMode`, `hotkey`)
+- Undo snapshots must include any card-specific config (e.g., `pomodoroConfig`, `diceMode`, `hotkey`, `width`, `height`)
 - Persistence must serialize/deserialize card-specific fields
 - Cards with timers must set `card._cleanup` to stop intervals/rafs; `bindRemove`, `undo`, `destroyAll` call it
 - Drag uses a global system: one `mousemove`/`mouseup` on `document`, `currentDragCard` identifies active card
+- Resize uses a similar global system in `resize.js`: `currentResizeCard` + document listeners
 - After any card repositioning (layout, drag, create), call `updateContainerHeight()`
 - Cards must have `role="region"` + `aria-label`; interactive elements need `:focus-visible` and `aria-label`
 - Toolbar HTML uses `onclick` handlers that call `window.*` — these are exposed in `main.js`
@@ -154,6 +159,28 @@ cards/dice.js ──→ (no imports)
 
 - First launch (no `workspace` in localStorage): tooltip "Glisse les cartes pour les réorganiser" above first card for 4s
 - Dismissed on first drag or after timeout; stores `onboarded` flag in localStorage
+
+## Resize System
+
+- Global resize handler in `resize.js` (same pattern as `drag.js`)
+- Handle `⤡` in bottom-right corner of each card, added via `buildCardShell()` in `shared.js`
+- Min constraints: 220px width, 180px height
+- Card uses `container-type: inline-size` for CSS container queries
+- Font sizes use `clamp()` with `cqi` units to scale with card width
+- Dimensions (`width`, `height`) persisted in localStorage and undo snapshots
+
+## Responsive Design
+
+- **Mobile-first** approach with `@media (max-width: 767px)` breakpoint
+- **Mobile (<768px)**: cards are `position: relative`, full-width, stacked vertically in a flex column; drag handle, resize handle, and onboarding tooltip hidden; toolbar buttons smaller
+- **Desktop (≥768px)**: default behavior — absolute positioning, drag, resize, all features
+- Text scales via `clamp()` + `vw` on mobile, `clamp()` + `cqi` on desktop (container queries)
+- Toolbar already responsive via `flex-wrap`
+
+## Deployment
+
+- **GitHub**: `freedisk/counter-workspace-vite` on `main` branch
+- **Vercel**: auto-deploys on push to `main` via Git integration
 
 ## Language
 
