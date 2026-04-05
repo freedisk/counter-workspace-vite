@@ -1,0 +1,1777 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Compteur</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  /* ── Theme variables ── */
+  body {
+    --bg-1: #667eea; --bg-2: #764ba2;
+    --text: #fff; --text-dim: rgba(255,255,255,0.5);
+    --glass: rgba(255,255,255,0.15); --glass-border: rgba(255,255,255,0.25);
+    --glass-hover: rgba(255,255,255,0.25); --glass-subtle: rgba(255,255,255,0.08);
+    --toolbar-bg: rgba(0,0,0,0.25); --toolbar-border: rgba(255,255,255,0.1);
+    --btn-bg: rgba(255,255,255,0.12); --btn-border: rgba(255,255,255,0.2);
+    --btn-text: #fff; --shadow: rgba(0,0,0,0.2);
+    --positive: #a8ff78; --negative: #ff6b6b; --zero: rgba(255,255,255,0.5);
+    --warn: #ffd600;
+  }
+
+  /* Dark themes */
+  body.theme-violet { --bg-1: #667eea; --bg-2: #764ba2; }
+  body.theme-ocean  { --bg-1: #0f2027; --bg-2: #2c5364; }
+  body.theme-sunset { --bg-1: #b44d00; --bg-2: #c7940a; }
+  body.theme-forest { --bg-1: #134e5e; --bg-2: #3a7744; }
+
+  /* Light mode overrides */
+  body.light {
+    --text: #1a1a2e; --text-dim: rgba(30,30,60,0.5);
+    --glass: rgba(255,255,255,0.55); --glass-border: rgba(255,255,255,0.7);
+    --glass-hover: rgba(255,255,255,0.7); --glass-subtle: rgba(255,255,255,0.3);
+    --toolbar-bg: rgba(255,255,255,0.4); --toolbar-border: rgba(0,0,0,0.08);
+    --btn-bg: rgba(255,255,255,0.4); --btn-border: rgba(0,0,0,0.1);
+    --btn-text: #1a1a2e; --shadow: rgba(0,0,0,0.1);
+    --positive: #2e7d32; --negative: #c62828; --zero: rgba(30,30,60,0.35);
+    --warn: #e65100;
+  }
+
+  body.light.theme-violet { --bg-1: #c3cfe2; --bg-2: #ddd6f3; }
+  body.light.theme-ocean  { --bg-1: #a8d5e2; --bg-2: #d4f1f9; }
+  body.light.theme-sunset { --bg-1: #ffecd2; --bg-2: #fcb69f; }
+  body.light.theme-forest { --bg-1: #b7e4c7; --bg-2: #d4edda; }
+
+  body {
+    min-height: 100vh;
+    position: relative;
+    overflow: auto;
+    background: linear-gradient(135deg, var(--bg-1), var(--bg-2));
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: var(--text);
+    transition: background 0.5s;
+  }
+
+  .toolbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 2000;
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.75rem 1.2rem;
+    background: var(--toolbar-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--toolbar-border);
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .toolbar button {
+    background: var(--btn-bg);
+    border: 1px solid var(--btn-border);
+    border-radius: 10px;
+    color: var(--btn-text);
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    user-select: none;
+    backdrop-filter: none;
+  }
+
+  .toolbar button:hover { background: var(--glass-hover); }
+  .toolbar button:active { transform: scale(0.95); }
+  .toolbar button:disabled { opacity: 0.3; cursor: default; transform: none; }
+  .toolbar .btn-danger:hover { background: rgba(255, 80, 80, 0.4); }
+  .toolbar .btn-undo:hover { background: rgba(255, 200, 50, 0.3); }
+  .toolbar .spacer { flex: 1; }
+  .toolbar .sep { width: 1px; background: var(--btn-border); margin: 0 0.25rem; }
+
+  /* Focus visible (a11y) */
+  :focus-visible {
+    outline: 2px solid var(--text);
+    outline-offset: 2px;
+  }
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  /* Toolbar dropdowns */
+  .toolbar-dropdown {
+    position: relative;
+  }
+  .toolbar-dropdown-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 0.35rem;
+    background: var(--toolbar-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--toolbar-border);
+    border-radius: 12px;
+    padding: 0.4rem;
+    z-index: 3000;
+    min-width: 150px;
+    box-shadow: 0 8px 24px var(--shadow);
+  }
+  .toolbar-dropdown-menu.open { display: flex; flex-direction: column; gap: 0.2rem; }
+  .toolbar-dropdown-menu button {
+    width: 100%;
+    text-align: left;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    padding: 0.5rem 0.8rem;
+  }
+
+  /* Theme picker */
+  .theme-bar {
+    display: flex;
+    gap: 0.35rem;
+    align-items: center;
+  }
+
+  .theme-swatch {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: border-color 0.2s, transform 0.15s;
+    position: relative;
+  }
+  .theme-swatch:hover { transform: scale(1.15); }
+  .theme-swatch.active { border-color: var(--btn-text); }
+
+  .theme-swatch[data-theme="violet"] { background: linear-gradient(135deg, #667eea, #764ba2); }
+  .theme-swatch[data-theme="ocean"]  { background: linear-gradient(135deg, #0f2027, #2c5364); }
+  .theme-swatch[data-theme="sunset"] { background: linear-gradient(135deg, #e65c00, #f9d423); }
+  .theme-swatch[data-theme="forest"] { background: linear-gradient(135deg, #134e5e, #71b280); }
+
+  .mode-toggle {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: 1px solid var(--btn-border);
+    background: var(--btn-bg);
+    color: var(--btn-text);
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s, transform 0.15s;
+    padding: 0;
+  }
+  .mode-toggle:hover { background: var(--glass-hover); transform: scale(1.1); }
+
+  /* Zone labels for grouped layout */
+  .zone-label {
+    position: absolute;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-dim);
+    pointer-events: none;
+    transition: opacity 0.4s;
+  }
+
+  .card {
+    position: absolute;
+    background: var(--glass);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
+    padding: 3rem 4rem 2rem;
+    text-align: center;
+    box-shadow: 0 8px 32px var(--shadow);
+    animation: fadeIn 0.4s ease;
+    transition: left 0.4s ease, top 0.4s ease, background 0.4s, border-color 0.4s;
+    min-width: 280px;
+  }
+
+  .card.no-transition { transition: none; }
+
+  .card.dragging {
+    opacity: 0.85;
+    box-shadow: 0 16px 48px var(--shadow);
+    z-index: 1000;
+    transition: none;
+  }
+
+  .drag-handle {
+    position: absolute;
+    top: 10px; left: 10px;
+    width: 28px; height: 28px;
+    cursor: grab;
+    display: flex; flex-wrap: wrap;
+    gap: 3px; padding: 4px;
+    border-radius: 8px;
+    transition: background 0.2s;
+  }
+  .drag-handle:active { cursor: grabbing; }
+  .drag-handle:hover { background: var(--glass-subtle); }
+  .drag-handle span { width: 4px; height: 4px; border-radius: 50%; background: var(--text-dim); }
+
+  .card-type-label {
+    position: absolute;
+    top: 12px; right: 16px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-dim);
+  }
+
+  /* Card name */
+  .card-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-dim);
+    margin-bottom: 0.8rem;
+    cursor: text;
+    min-height: 1.3em;
+    padding: 0.15rem 0.4rem;
+    border-radius: 6px;
+    transition: background 0.2s;
+    outline: none;
+    border: 1px solid transparent;
+  }
+  .card-name:hover { background: var(--glass-subtle); }
+  .card-name:focus {
+    background: var(--glass-subtle);
+    border-color: var(--glass-border);
+    color: var(--text);
+  }
+  .card-name:empty::before {
+    content: attr(data-placeholder);
+    color: var(--text-dim);
+    opacity: 0.5;
+    font-style: italic;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .display {
+    font-size: 5rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+    margin-bottom: 1.5rem;
+    transition: transform 0.15s ease, color 0.3s ease;
+    cursor: pointer;
+    font-variant-numeric: tabular-nums;
+  }
+  .display.bump { transform: scale(1.15); }
+
+  .counter-input {
+    font-size: 3.5rem;
+    font-weight: 700;
+    width: 6ch;
+    text-align: center;
+    background: var(--glass-subtle);
+    border: 2px solid var(--glass-border);
+    border-radius: 12px;
+    color: var(--text);
+    outline: none;
+    margin-bottom: 1.5rem;
+    padding: 0.2rem;
+    font-family: inherit;
+  }
+
+  .buttons {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    margin-bottom: 0.75rem;
+  }
+
+  button {
+    background: var(--glass);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 14px;
+    color: var(--text);
+    font-size: 1.1rem;
+    font-weight: 600;
+    padding: 0.9rem 2rem;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    user-select: none;
+  }
+  button:hover { background: var(--glass-hover); }
+  button:active { transform: scale(0.95); }
+
+  .btn-sm { padding: 0.6rem 1.2rem; font-size: 0.85rem; }
+  .btn-xs { font-size: 0.75rem; padding: 0.4rem 1rem; border-radius: 8px; opacity: 0.6; }
+  .btn-xs:hover { opacity: 1; }
+  .btn-remove:hover { background: rgba(255, 80, 80, 0.3); }
+
+  .btn-play { font-size: 1.4rem; padding: 0.6rem 1.6rem; }
+
+  .accent-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-bottom: -1px;
+  }
+
+  .edit-hint {
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    margin-top: -0.8rem;
+    margin-bottom: 1rem;
+  }
+
+  .cd-picker {
+    display: flex;
+    gap: 0.3rem;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 1.5rem;
+  }
+  .cd-picker.hidden { display: none; }
+
+  .cd-unit {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+  }
+
+  .cd-unit-label {
+    font-size: 0.55rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    margin-bottom: 0.15rem;
+  }
+
+  .cd-val {
+    font-size: 3.2rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+    min-width: 2ch;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cd-separator {
+    font-size: 2.8rem;
+    font-weight: 700;
+    color: var(--text-dim);
+    padding: 0 0.1rem;
+    align-self: center;
+    margin-top: 1rem;
+  }
+
+  .cd-arrow {
+    width: 44px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--glass-subtle);
+    border: 1px solid var(--btn-border);
+    border-radius: 10px;
+    color: var(--text-dim);
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    user-select: none;
+    padding: 0;
+  }
+  .cd-arrow:hover { background: var(--glass-hover); color: var(--text); }
+  .cd-arrow:active { transform: scale(0.9); }
+
+  .cd-presets {
+    display: flex;
+    gap: 0.4rem;
+    justify-content: center;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+  .cd-presets.hidden { display: none; }
+
+  .cd-preset {
+    background: var(--glass-subtle);
+    border: 1px solid var(--btn-border);
+    border-radius: 8px;
+    color: var(--text-dim);
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.3rem 0.6rem;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    backdrop-filter: none;
+  }
+  .cd-preset:hover { background: var(--glass-hover); color: var(--text); }
+
+/* Pomodoro */
+.pomo-config {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: center;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.pomo-config.hidden { display: none; }
+
+.pomo-field {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.pomo-field-label {
+  font-size: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  margin-bottom: 0.1rem;
+}
+
+.pomo-field-val {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--text);
+  min-width: 2ch;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.pomo-cycles {
+  display: flex;
+  gap: 0.4rem;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.pomo-dot {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--text-dim);
+  transition: background 0.3s, border-color 0.3s;
+}
+
+.pomo-dot.filled {
+  background: var(--text);
+  border-color: var(--text);
+}
+
+.pomo-phase {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-top: -0.8rem;
+  margin-bottom: 1rem;
+  transition: color 0.3s;
+}
+
+@keyframes pomoPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.7; }
+}
+
+.card.pomo-flash {
+  animation: pomoPulse 0.33s ease 3;
+}
+
+/* Dice */
+.dice-tabs {
+  display: flex;
+  gap: 0;
+  justify-content: center;
+  margin-bottom: 1rem;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--glass-border);
+}
+
+.dice-tab {
+  flex: 1;
+  padding: 0.4rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  background: var(--glass-subtle);
+  color: var(--text-dim);
+  border: none;
+  transition: background 0.2s, color 0.2s;
+}
+
+.dice-tab.active {
+  background: var(--glass-hover);
+  color: var(--text);
+}
+
+.dice-selector {
+  display: flex;
+  gap: 0.3rem;
+  justify-content: center;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.dice-type-btn {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-radius: 8px;
+  background: var(--glass-subtle);
+  border: 1px solid var(--glass-border);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  backdrop-filter: none;
+}
+
+.dice-type-btn.active {
+  background: var(--glass-hover);
+  color: var(--text);
+  border-color: var(--text-dim);
+}
+
+.dice-history {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  margin-bottom: 1rem;
+  min-height: 1.2em;
+}
+
+.dice-faces-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.dice-face-row {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.dice-face-input {
+  flex: 1;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: var(--glass-subtle);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  color: var(--text);
+  outline: none;
+  font-family: inherit;
+}
+
+.dice-face-del {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid var(--glass-border);
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  backdrop-filter: none;
+}
+
+.dice-face-del:hover { background: rgba(255,80,80,0.3); color: var(--text); }
+.dice-face-del:disabled { opacity: 0.2; cursor: default; }
+
+.dice-presets {
+  display: flex;
+  gap: 0.4rem;
+  justify-content: center;
+  margin-bottom: 0.8rem;
+}
+
+.btn-roll {
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 0.8rem 3rem;
+  border-radius: 16px;
+}
+
+.dice-result {
+  font-size: 4rem;
+  font-weight: 700;
+  color: var(--text);
+  min-height: 1.2em;
+  margin-bottom: 0.5rem;
+  transition: transform 0.2s ease;
+}
+
+.dice-result.bump { transform: scale(1.3); }
+
+.dice-mode-panel { display: none; }
+.dice-mode-panel.active { display: block; }
+
+/* Onboarding tooltip */
+.onboard-tip {
+  position: absolute;
+  z-index: 1500;
+  background: var(--glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 0.5rem 1rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  pointer-events: none;
+  animation: fadeIn 0.4s ease;
+  box-shadow: 0 4px 16px var(--shadow);
+}
+.onboard-tip::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 20px;
+  width: 12px; height: 12px;
+  background: var(--glass);
+  border-right: 1px solid var(--glass-border);
+  border-bottom: 1px solid var(--glass-border);
+  transform: rotate(45deg);
+}
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <div class="toolbar-dropdown" id="dd-layout">
+    <button onclick="toggleDropdown('dd-layout')">Disposition ▾</button>
+    <div class="toolbar-dropdown-menu">
+      <button onclick="organizeGrid(); closeDropdowns()">Grille</button>
+      <button onclick="organizeRow(); closeDropdowns()">Ligne</button>
+      <button onclick="organizeStack(); closeDropdowns()">Empiler</button>
+      <button onclick="organizeGrouped(); closeDropdowns()">Grouper</button>
+    </div>
+  </div>
+  <div class="toolbar-dropdown" id="dd-add">
+    <button onclick="toggleDropdown('dd-add')">Ajouter ▾</button>
+    <div class="toolbar-dropdown-menu">
+      <button onclick="createCard('counter'); closeDropdowns()">Compteur</button>
+      <button onclick="createCard('stopwatch'); closeDropdowns()">Chrono</button>
+      <button onclick="createCard('countdown'); closeDropdowns()">Rebours</button>
+      <button onclick="createCard('pomodoro'); closeDropdowns()">Pomodoro</button>
+      <button onclick="createCard('dice'); closeDropdowns()">Dé</button>
+    </div>
+  </div>
+  <div class="sep"></div>
+  <button class="btn-undo" id="btn-undo" onclick="undo()" disabled>Annuler</button>
+  <button class="btn-danger" onclick="destroyAll()">Tout supprimer</button>
+  <button class="btn-danger" id="btn-reset-ws" onclick="resetWorkspace()">Réinitialiser</button>
+  <span class="spacer"></span>
+  <div class="theme-bar">
+    <div class="theme-swatch active" data-theme="violet" title="Violet" onclick="setTheme('violet')"></div>
+    <div class="theme-swatch" data-theme="ocean" title="Océan" onclick="setTheme('ocean')"></div>
+    <div class="theme-swatch" data-theme="sunset" title="Crépuscule" onclick="setTheme('sunset')"></div>
+    <div class="theme-swatch" data-theme="forest" title="Forêt" onclick="setTheme('forest')"></div>
+    <div class="mode-toggle" id="mode-toggle" onclick="toggleMode()" title="Clair / Sombre">🌙</div>
+  </div>
+</div>
+
+<div id="container" role="application"></div>
+
+<script>
+const ACCENT_COLORS = ['#fff','#ff6ec7','#00e5ff','#ffd600','#76ff03','#ff5252','#b388ff','#64ffda','#ff9100'];
+let nextColorIdx = 0, cardId = 0;
+const undoStack = [];
+const undoBtn = document.getElementById('btn-undo');
+
+// ── Undo ──
+function saveState() {
+  const cards = document.querySelectorAll('.card');
+  const snap = [];
+  cards.forEach(c => {
+    const nameEl = c.querySelector('.card-name');
+    const entry = {
+      type: c.dataset.type,
+      accent: c.dataset.accent,
+      count: c.dataset.count,
+      name: nameEl ? nameEl.textContent : '',
+      left: c.style.left,
+      top: c.style.top
+    };
+    if (c.dataset.pomodoroConfig) entry.pomodoroConfig = JSON.parse(c.dataset.pomodoroConfig);
+    if (c.dataset.diceMode) {
+      entry.diceMode = c.dataset.diceMode;
+      entry.diceFaces = parseInt(c.dataset.diceFaces) || 6;
+      entry.diceLabels = c.dataset.diceLabels ? JSON.parse(c.dataset.diceLabels) : [];
+    }
+    snap.push(entry);
+  });
+  undoStack.push(snap);
+  if (undoStack.length > 30) undoStack.shift();
+  undoBtn.disabled = false;
+  scheduleSave();
+}
+
+function undo() {
+  if (!undoStack.length) return;
+  const snap = undoStack.pop();
+  undoBtn.disabled = !undoStack.length;
+  document.querySelectorAll('.card').forEach(c => { if (c._cleanup) c._cleanup(); c.remove(); });
+  clearZoneLabels();
+  cardId = 0; nextColorIdx = 0;
+  snap.forEach(s => {
+    nextColorIdx = Math.max(0, ACCENT_COLORS.indexOf(s.accent));
+    const opts = { startVal: parseInt(s.count) || 0, left: s.left, top: s.top, name: s.name, skipSave: true };
+    if (s.pomodoroConfig) opts.pomodoroConfig = s.pomodoroConfig;
+    if (s.diceMode) { opts.diceMode = s.diceMode; opts.diceFaces = s.diceFaces; opts.diceLabels = s.diceLabels; }
+    createCard(s.type, opts);
+  });
+  updateContainerHeight();
+}
+
+// ── Persistence ──
+let saveTimer = null;
+
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveWorkspace, 300);
+}
+
+function saveWorkspace() {
+  const cards = document.querySelectorAll('.card');
+  const data = { theme: currentTheme, lightMode: isLight, cards: [] };
+  cards.forEach(c => {
+    const nameEl = c.querySelector('.card-name');
+    const entry = {
+      type: c.dataset.type,
+      name: nameEl ? nameEl.textContent : '',
+      accent: c.dataset.accent,
+      count: c.dataset.count,
+      left: c.style.left,
+      top: c.style.top
+    };
+    if (c.dataset.type === 'pomodoro' && c.dataset.pomodoroConfig) {
+      entry.pomodoroConfig = JSON.parse(c.dataset.pomodoroConfig);
+    }
+    if (c.dataset.type === 'dice') {
+      entry.diceMode = c.dataset.diceMode || 'numeric';
+      entry.diceFaces = parseInt(c.dataset.diceFaces) || 6;
+      entry.diceLabels = c.dataset.diceLabels ? JSON.parse(c.dataset.diceLabels) : ['Oui', 'Non'];
+    }
+    data.cards.push(entry);
+  });
+  localStorage.setItem('workspace', JSON.stringify(data));
+}
+
+function loadWorkspace() {
+  const raw = localStorage.getItem('workspace');
+  if (!raw) return false;
+  try {
+    const data = JSON.parse(raw);
+    if (!data.cards || !data.cards.length) return false;
+    if (data.theme) { currentTheme = data.theme; setTheme(data.theme); }
+    if (data.lightMode && !isLight) toggleMode();
+    data.cards.forEach(s => {
+      nextColorIdx = Math.max(0, ACCENT_COLORS.indexOf(s.accent));
+      const opts = {
+        startVal: parseInt(s.count) || 0,
+        left: s.left,
+        top: s.top,
+        name: s.name,
+        skipSave: true
+      };
+      if (s.pomodoroConfig) opts.pomodoroConfig = s.pomodoroConfig;
+      if (s.diceMode) { opts.diceMode = s.diceMode; opts.diceFaces = s.diceFaces; opts.diceLabels = s.diceLabels; }
+      createCard(s.type, opts);
+    });
+    return true;
+  } catch (e) { return false; }
+}
+
+// ── Shared ──
+function positionCard(card, opts) {
+  if (opts.left && opts.top) {
+    card.style.left = opts.left;
+    card.style.top = opts.top;
+    card.classList.add('no-transition');
+    requestAnimationFrame(() => card.classList.remove('no-transition'));
+  } else {
+    const o = (cardId % 5) * 40;
+    card.style.left = `calc(50% - 140px + ${o}px)`;
+    card.style.top = `calc(50% - 150px + ${o}px)`;
+  }
+}
+
+// Global drag system — single set of document listeners
+let currentDragCard = null, dragSX, dragSY, dragOX, dragOY;
+
+document.addEventListener('mousemove', e => {
+  if (!currentDragCard) return;
+  currentDragCard.style.left = (dragOX + e.clientX - dragSX) + 'px';
+  currentDragCard.style.top = (dragOY + e.clientY - dragSY) + 'px';
+});
+document.addEventListener('touchmove', e => {
+  if (!currentDragCard) return;
+  const t = e.touches[0];
+  currentDragCard.style.left = (dragOX + t.clientX - dragSX) + 'px';
+  currentDragCard.style.top = (dragOY + t.clientY - dragSY) + 'px';
+});
+function endDrag() {
+  if (!currentDragCard) return;
+  currentDragCard.classList.remove('dragging');
+  currentDragCard = null;
+  scheduleSave();
+  updateContainerHeight();
+}
+document.addEventListener('mouseup', endDrag);
+document.addEventListener('touchend', endDrag);
+
+function bindDrag(card) {
+  const handle = card.querySelector('.drag-handle');
+  function start(e) {
+    currentDragCard = card; card.classList.add('dragging');
+    const ev = e.touches ? e.touches[0] : e;
+    dragSX = ev.clientX; dragSY = ev.clientY; dragOX = card.offsetLeft; dragOY = card.offsetTop;
+    e.preventDefault();
+  }
+  handle.addEventListener('mousedown', start);
+  handle.addEventListener('touchstart', start);
+}
+
+function bindRemove(card) {
+  card.querySelector('[data-action="remove"]').addEventListener('click', () => {
+    if (document.querySelectorAll('.card').length > 1) {
+      saveState();
+      if (card._cleanup) card._cleanup();
+      card.style.animation = 'fadeIn 0.3s ease reverse';
+      setTimeout(() => card.remove(), 280);
+    }
+  });
+}
+
+function fmtTime(ms) {
+  const totalSec = Math.floor(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  const cs = Math.floor((ms % 1000) / 10);
+  const pad = n => String(n).padStart(2, '0');
+  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}.${pad(cs)}`;
+}
+
+function bindHold(el, onStep) {
+  let timer = null, delay;
+  function start() {
+    saveState(); delay = 400; onStep();
+    (function tick() {
+      timer = setTimeout(() => { onStep(); delay = Math.max(30, delay * 0.85); tick(); }, delay);
+    })();
+  }
+  function stop() { clearTimeout(timer); timer = null; }
+  el.addEventListener('mousedown', start);
+  el.addEventListener('touchstart', e => { e.preventDefault(); start(); });
+  el.addEventListener('mouseup', stop);
+  el.addEventListener('mouseleave', stop);
+  el.addEventListener('touchend', stop);
+  el.addEventListener('touchcancel', stop);
+}
+
+// ── Toolbar dropdowns ──
+function toggleDropdown(id) {
+  const menu = document.getElementById(id).querySelector('.toolbar-dropdown-menu');
+  const isOpen = menu.classList.contains('open');
+  closeDropdowns();
+  if (!isOpen) menu.classList.add('open');
+}
+function closeDropdowns() {
+  document.querySelectorAll('.toolbar-dropdown-menu').forEach(m => m.classList.remove('open'));
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.toolbar-dropdown')) closeDropdowns();
+});
+
+function updateContainerHeight() {
+  const container = document.getElementById('container');
+  let maxBottom = 0;
+  container.querySelectorAll('.card').forEach(c => {
+    const bottom = c.offsetTop + c.offsetHeight;
+    if (bottom > maxBottom) maxBottom = bottom;
+  });
+  container.style.minHeight = maxBottom ? (maxBottom + 40) + 'px' : '';
+}
+
+// ── Card factory ──
+function createCard(type, opts = {}) {
+  if (!opts.skipSave) saveState();
+
+  const accent = ACCENT_COLORS[nextColorIdx % ACCENT_COLORS.length];
+  nextColorIdx++;
+  const id = cardId++;
+
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.id = `card-${id}`;
+  card.dataset.type = type;
+  card.dataset.accent = accent;
+  card.setAttribute('role', 'region');
+  card.setAttribute('aria-label', `${type} — ${opts.name || 'sans nom'}`);
+
+  positionCard(card, opts);
+
+  const labels = { counter: 'Compteur', stopwatch: 'Chronomètre', countdown: 'Rebours', pomodoro: 'Pomodoro', dice: 'Dé' };
+  const placeholders = { counter: 'Nom du compteur…', stopwatch: 'Nom du chrono…', countdown: 'Nom du rebours…', pomodoro: 'Nom du pomodoro…', dice: 'Nom du dé…' };
+
+  const handleHTML = `<div class="drag-handle" aria-label="Déplacer la carte"><span></span><span></span><span></span><span></span><span></span><span></span></div>`;
+  const labelHTML = `<span class="card-type-label">${labels[type]}</span>`;
+  const nameHTML = `<div class="card-name" contenteditable="true" data-placeholder="${placeholders[type]}" spellcheck="false">${opts.name || ''}</div>`;
+  const cloneDot = `<span class="accent-dot" style="background:${ACCENT_COLORS[nextColorIdx % ACCENT_COLORS.length]}"></span>`;
+  const bottomHTML = `
+    <div class="buttons">
+      <button class="btn-xs" data-action="clone-${type}">${cloneDot} Cloner</button>
+      <button class="btn-xs btn-remove" data-action="remove">Supprimer</button>
+    </div>`;
+
+  document.getElementById('container').appendChild(card);
+
+  if (type === 'counter') buildCounter(card, id, accent, opts, handleHTML, labelHTML, nameHTML, bottomHTML);
+  else if (type === 'stopwatch') buildStopwatch(card, id, accent, opts, handleHTML, labelHTML, nameHTML, bottomHTML);
+  else if (type === 'countdown') buildCountdown(card, id, accent, opts, handleHTML, labelHTML, nameHTML, bottomHTML);
+  else if (type === 'pomodoro') buildPomodoro(card, id, accent, opts, handleHTML, labelHTML, nameHTML, bottomHTML);
+  else if (type === 'dice') buildDice(card, id, accent, opts, handleHTML, labelHTML, nameHTML, bottomHTML);
+
+  bindDrag(card);
+  bindRemove(card);
+  card.querySelector(`[data-action="clone-${type}"]`).addEventListener('click', () => createCard(type));
+
+  // Prevent drag when editing name
+  const nameEl = card.querySelector('.card-name');
+  nameEl.addEventListener('mousedown', e => e.stopPropagation());
+  nameEl.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); nameEl.blur(); } });
+  nameEl.addEventListener('blur', () => {
+    card.setAttribute('aria-label', `${labels[type]} — ${nameEl.textContent || 'sans nom'}`);
+    scheduleSave();
+  });
+
+  updateContainerHeight();
+}
+
+// ── Counter ──
+function buildCounter(card, id, accent, opts, handleHTML, labelHTML, nameHTML, bottomHTML) {
+  const startVal = opts.startVal || 0;
+  card.dataset.count = String(startVal);
+
+  card.innerHTML = `
+    ${handleHTML}${labelHTML}
+    ${nameHTML}
+    <div class="display" id="disp-${id}" style="color:${accent}" role="button" tabindex="0" aria-label="Modifier la valeur">${startVal}</div>
+    <div class="edit-hint">clic pour modifier</div>
+    <div class="buttons">
+      <button class="hold-btn btn-sm" data-step="-1" aria-label="Décrémenter">-1</button>
+      <button class="btn-sm" data-action="raz">RAZ</button>
+      <button class="hold-btn btn-sm" data-step="1" aria-label="Incrémenter">+1</button>
+    </div>
+    ${bottomHTML}`;
+
+  const el = document.getElementById(`disp-${id}`);
+
+  function updateDisplay() {
+    const v = parseInt(card.dataset.count);
+    el.textContent = v;
+    el.classList.add('bump');
+    setTimeout(() => el.classList.remove('bump'), 150);
+    const cs = getComputedStyle(document.body);
+    el.style.color = v > 0 ? accent : v < 0 ? cs.getPropertyValue('--negative').trim() : cs.getPropertyValue('--zero').trim();
+  }
+
+  card.querySelectorAll('.hold-btn').forEach(btn => {
+    const step = parseInt(btn.dataset.step);
+    bindHold(btn, () => { card.dataset.count = parseInt(card.dataset.count) + step; updateDisplay(); });
+  });
+
+  function openEditor() {
+    const cur = card.dataset.count;
+    const input = document.createElement('input');
+    input.type = 'number'; input.className = 'counter-input';
+    input.value = cur; input.style.color = el.style.color;
+    el.style.display = 'none';
+    el.parentNode.insertBefore(input, el);
+    input.focus(); input.select();
+    function commit() {
+      saveState();
+      card.dataset.count = String(parseInt(input.value) || 0);
+      input.remove(); el.style.display = ''; updateDisplay();
+    }
+    input.addEventListener('blur', commit);
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') input.blur();
+      if (e.key === 'Escape') { input.value = cur; input.blur(); }
+    });
+  }
+  el.addEventListener('click', openEditor);
+  el.addEventListener('keydown', e => { if (e.key === 'Enter') openEditor(); });
+
+  card.querySelector('[data-action="raz"]').addEventListener('click', () => {
+    saveState(); card.dataset.count = '0'; updateDisplay();
+  });
+}
+
+// ── Stopwatch ──
+function buildStopwatch(card, id, accent, opts, handleHTML, labelHTML, nameHTML, bottomHTML) {
+  card.dataset.count = '0';
+  let elapsed = 0, startTime = 0, running = false, raf;
+  card._cleanup = () => { running = false; cancelAnimationFrame(raf); };
+
+  card.innerHTML = `
+    ${handleHTML}${labelHTML}
+    ${nameHTML}
+    <div class="display" id="disp-${id}" style="color:${accent}">00:00.00</div>
+    <div class="buttons">
+      <button class="btn-play" data-action="toggle">▶</button>
+      <button class="btn-sm" data-action="reset">RAZ</button>
+    </div>
+    ${bottomHTML}`;
+
+  const el = document.getElementById(`disp-${id}`);
+  const toggleBtn = card.querySelector('[data-action="toggle"]');
+
+  function render() {
+    const now = running ? elapsed + (Date.now() - startTime) : elapsed;
+    el.textContent = fmtTime(now);
+    card.dataset.count = String(Math.floor(now / 1000));
+    if (running) raf = requestAnimationFrame(render);
+  }
+
+  toggleBtn.addEventListener('click', () => {
+    if (running) {
+      running = false; elapsed += Date.now() - startTime;
+      toggleBtn.textContent = '▶'; cancelAnimationFrame(raf);
+      el.style.color = accent;
+    } else {
+      running = true; startTime = Date.now();
+      toggleBtn.textContent = '⏸'; el.style.color = '#76ff03';
+      render();
+    }
+  });
+
+  card.querySelector('[data-action="reset"]').addEventListener('click', () => {
+    running = false; elapsed = 0; cancelAnimationFrame(raf);
+    toggleBtn.textContent = '▶'; el.textContent = '00:00.00';
+    el.style.color = accent; card.dataset.count = '0';
+  });
+}
+
+// ── Countdown ──
+function buildCountdown(card, id, accent, opts, handleHTML, labelHTML, nameHTML, bottomHTML) {
+  card.dataset.count = '0';
+  let totalMs = 0, remaining = 0, startTime = 0, running = false, raf;
+  card._cleanup = () => { running = false; cancelAnimationFrame(raf); };
+  const vals = { h: 0, m: 5, s: 0 };
+
+  card.innerHTML = `
+    ${handleHTML}${labelHTML}
+    ${nameHTML}
+    <div class="cd-picker">
+      <div class="cd-unit" data-unit="h">
+        <div class="cd-unit-label">heures</div>
+        <div class="cd-arrow" data-dir="up">▲</div>
+        <div class="cd-val">00</div>
+        <div class="cd-arrow" data-dir="down">▼</div>
+      </div>
+      <div class="cd-separator">:</div>
+      <div class="cd-unit" data-unit="m">
+        <div class="cd-unit-label">minutes</div>
+        <div class="cd-arrow" data-dir="up">▲</div>
+        <div class="cd-val">05</div>
+        <div class="cd-arrow" data-dir="down">▼</div>
+      </div>
+      <div class="cd-separator">:</div>
+      <div class="cd-unit" data-unit="s">
+        <div class="cd-unit-label">secondes</div>
+        <div class="cd-arrow" data-dir="up">▲</div>
+        <div class="cd-val">00</div>
+        <div class="cd-arrow" data-dir="down">▼</div>
+      </div>
+    </div>
+    <div class="cd-presets">
+      <div class="cd-preset" data-t="30">30s</div>
+      <div class="cd-preset" data-t="60">1m</div>
+      <div class="cd-preset" data-t="120">2m</div>
+      <div class="cd-preset" data-t="300">5m</div>
+      <div class="cd-preset" data-t="600">10m</div>
+      <div class="cd-preset" data-t="900">15m</div>
+      <div class="cd-preset" data-t="1800">30m</div>
+      <div class="cd-preset" data-t="3600">1h</div>
+    </div>
+    <div class="display" id="disp-${id}" style="color:${accent}; display:none;">05:00.00</div>
+    <div class="buttons">
+      <button class="btn-play" data-action="toggle">▶</button>
+      <button class="btn-sm" data-action="reset">RAZ</button>
+    </div>
+    ${bottomHTML}`;
+
+  const el = document.getElementById(`disp-${id}`);
+  const toggleBtn = card.querySelector('[data-action="toggle"]');
+  const picker = card.querySelector('.cd-picker');
+  const presets = card.querySelector('.cd-presets');
+  const units = card.querySelectorAll('.cd-unit');
+  const maxes = { h: 23, m: 59, s: 59 };
+
+  function syncPicker() {
+    units.forEach(u => {
+      u.querySelector('.cd-val').textContent = String(vals[u.dataset.unit]).padStart(2, '0');
+    });
+    remaining = (vals.h * 3600 + vals.m * 60 + vals.s) * 1000;
+    totalMs = remaining;
+    card.dataset.count = String(Math.ceil(remaining / 1000));
+  }
+
+  function setFromSeconds(sec) {
+    vals.h = Math.floor(sec / 3600);
+    vals.m = Math.floor((sec % 3600) / 60);
+    vals.s = sec % 60;
+    syncPicker();
+  }
+
+  units.forEach(u => {
+    const key = u.dataset.unit;
+    u.querySelectorAll('.cd-arrow').forEach(arrow => {
+      const dir = arrow.dataset.dir === 'up' ? 1 : -1;
+      let ht = null, hd;
+      function step() { vals[key] = (vals[key] + dir + maxes[key] + 1) % (maxes[key] + 1); syncPicker(); }
+      function startH() { hd = 300; step(); (function t() { ht = setTimeout(() => { step(); hd = Math.max(60, hd * 0.8); t(); }, hd); })(); }
+      function stopH() { clearTimeout(ht); ht = null; }
+      arrow.addEventListener('mousedown', startH);
+      arrow.addEventListener('touchstart', e => { e.preventDefault(); startH(); });
+      arrow.addEventListener('mouseup', stopH);
+      arrow.addEventListener('mouseleave', stopH);
+      arrow.addEventListener('touchend', stopH);
+      arrow.addEventListener('touchcancel', stopH);
+    });
+    u.addEventListener('wheel', e => {
+      e.preventDefault();
+      vals[key] = (vals[key] + (e.deltaY < 0 ? 1 : -1) + maxes[key] + 1) % (maxes[key] + 1);
+      syncPicker();
+    }, { passive: false });
+  });
+
+  card.querySelectorAll('.cd-preset').forEach(btn => {
+    btn.addEventListener('click', () => setFromSeconds(parseInt(btn.dataset.t)));
+  });
+
+  function showPicker() { picker.classList.remove('hidden'); presets.classList.remove('hidden'); el.style.display = 'none'; }
+  function showDisplay() { picker.classList.add('hidden'); presets.classList.add('hidden'); el.style.display = ''; }
+
+  function render() {
+    const now = running ? remaining - (Date.now() - startTime) : remaining;
+    if (now <= 0) {
+      remaining = 0; running = false; paused = false; cancelAnimationFrame(raf);
+      el.textContent = '00:00.00'; el.style.color = '#ff5252';
+      el.classList.add('bump'); setTimeout(() => el.classList.remove('bump'), 300);
+      toggleBtn.textContent = '▶'; card.dataset.count = '0';
+      setTimeout(showPicker, 800);
+      return;
+    }
+    el.textContent = fmtTime(now);
+    card.dataset.count = String(Math.ceil(now / 1000));
+    const pct = now / totalMs;
+    const cs = getComputedStyle(document.body);
+    el.style.color = pct > 0.25 ? accent : pct > 0.1 ? cs.getPropertyValue('--warn').trim() : cs.getPropertyValue('--negative').trim();
+    if (running) raf = requestAnimationFrame(render);
+  }
+
+  syncPicker();
+
+  let paused = false;
+
+  toggleBtn.addEventListener('click', () => {
+    if (running) {
+      // Pause: freeze remaining, stay on display
+      running = false; paused = true;
+      remaining -= (Date.now() - startTime);
+      cancelAnimationFrame(raf);
+      toggleBtn.textContent = '▶';
+      el.textContent = fmtTime(remaining);
+    } else if (paused && remaining > 0) {
+      // Resume from paused state
+      running = true; startTime = Date.now();
+      toggleBtn.textContent = '⏸';
+      showDisplay(); render();
+    } else {
+      // Fresh start from picker
+      paused = false;
+      remaining = (vals.h * 3600 + vals.m * 60 + vals.s) * 1000;
+      totalMs = remaining;
+      if (remaining <= 0) return;
+      running = true; startTime = Date.now();
+      toggleBtn.textContent = '⏸'; showDisplay(); render();
+    }
+  });
+
+  card.querySelector('[data-action="reset"]').addEventListener('click', () => {
+    running = false; paused = false; cancelAnimationFrame(raf); toggleBtn.textContent = '▶';
+    vals.h = 0; vals.m = 5; vals.s = 0;
+    syncPicker(); showPicker(); el.style.color = accent;
+  });
+}
+
+// ── Pomodoro ──
+function buildPomodoro(card, id, accent, opts, handleHTML, labelHTML, nameHTML, bottomHTML) {
+  const cfg = opts.pomodoroConfig || { work: 25, shortBreak: 5, longBreak: 15, cycles: 4 };
+  card.dataset.count = '0';
+  card.dataset.pomodoroConfig = JSON.stringify(cfg);
+
+  let remaining = 0, startTime = 0, running = false, paused = false, raf;
+  card._cleanup = () => { running = false; cancelAnimationFrame(raf); };
+  let phase = 'work';
+  let currentCycle = 0;
+
+  const phaseLabels = { work: 'Travail', shortBreak: 'Pause courte', longBreak: 'Pause longue' };
+
+  function buildCycleDotsHTML() {
+    let dots = '';
+    for (let i = 0; i < cfg.cycles; i++) dots += '<div class="pomo-dot"></div>';
+    return dots;
+  }
+
+  card.innerHTML = `
+    ${handleHTML}${labelHTML}
+    ${nameHTML}
+    <div class="pomo-config">
+      <div class="pomo-field" data-key="work">
+        <div class="pomo-field-label">Travail</div>
+        <div class="cd-arrow" data-dir="up">▲</div>
+        <div class="pomo-field-val">${cfg.work}</div>
+        <div class="cd-arrow" data-dir="down">▼</div>
+      </div>
+      <div class="pomo-field" data-key="shortBreak">
+        <div class="pomo-field-label">Pause</div>
+        <div class="cd-arrow" data-dir="up">▲</div>
+        <div class="pomo-field-val">${cfg.shortBreak}</div>
+        <div class="cd-arrow" data-dir="down">▼</div>
+      </div>
+      <div class="pomo-field" data-key="longBreak">
+        <div class="pomo-field-label">Longue</div>
+        <div class="cd-arrow" data-dir="up">▲</div>
+        <div class="pomo-field-val">${cfg.longBreak}</div>
+        <div class="cd-arrow" data-dir="down">▼</div>
+      </div>
+      <div class="pomo-field" data-key="cycles">
+        <div class="pomo-field-label">Cycles</div>
+        <div class="cd-arrow" data-dir="up">▲</div>
+        <div class="pomo-field-val">${cfg.cycles}</div>
+        <div class="cd-arrow" data-dir="down">▼</div>
+      </div>
+    </div>
+    <div class="pomo-cycles">${buildCycleDotsHTML()}</div>
+    <div class="display" id="disp-${id}" style="color:${accent}; display:none;">25:00</div>
+    <div class="pomo-phase" id="phase-${id}" style="display:none;">Travail</div>
+    <div class="buttons">
+      <button class="btn-play" data-action="toggle">▶</button>
+      <button class="btn-sm" data-action="skip">⏭</button>
+      <button class="btn-sm" data-action="reset">RAZ</button>
+    </div>
+    ${bottomHTML}`;
+
+  const el = document.getElementById('disp-' + id);
+  const phaseEl = document.getElementById('phase-' + id);
+  const toggleBtn = card.querySelector('[data-action="toggle"]');
+  const configEl = card.querySelector('.pomo-config');
+  const cyclesEl = card.querySelector('.pomo-cycles');
+  const maxes = { work: 60, shortBreak: 30, longBreak: 60, cycles: 10 };
+  const mins = { work: 1, shortBreak: 1, longBreak: 1, cycles: 1 };
+
+  function showConfig() { configEl.classList.remove('hidden'); el.style.display = 'none'; phaseEl.style.display = 'none'; }
+  function showTimer() { configEl.classList.add('hidden'); el.style.display = ''; phaseEl.style.display = ''; }
+
+  function updateCycleDots() {
+    const dots = cyclesEl.querySelectorAll('.pomo-dot');
+    dots.forEach((d, i) => d.classList.toggle('filled', i < currentCycle));
+  }
+
+  function getPhaseColor() {
+    const cs = getComputedStyle(document.body);
+    if (phase === 'work') return accent;
+    if (phase === 'shortBreak') return cs.getPropertyValue('--positive').trim();
+    return '#64b5f6';
+  }
+
+  function startPhase() {
+    const durations = { work: cfg.work, shortBreak: cfg.shortBreak, longBreak: cfg.longBreak };
+    remaining = durations[phase] * 60 * 1000;
+    startTime = Date.now();
+    running = true; paused = false;
+    toggleBtn.textContent = '⏸';
+    phaseEl.textContent = phaseLabels[phase];
+    const c = getPhaseColor();
+    el.style.color = c;
+    phaseEl.style.color = c;
+    showTimer();
+    render();
+  }
+
+  function nextPhase() {
+    if (phase === 'work') {
+      currentCycle++;
+      updateCycleDots();
+      if (currentCycle >= cfg.cycles) {
+        phase = 'longBreak';
+      } else {
+        phase = 'shortBreak';
+      }
+    } else if (phase === 'shortBreak') {
+      phase = 'work';
+    } else {
+      currentCycle = 0;
+      updateCycleDots();
+      phase = 'work';
+    }
+  }
+
+  function flashAndNext() {
+    running = false;
+    cancelAnimationFrame(raf);
+    card.classList.add('pomo-flash');
+    setTimeout(() => {
+      card.classList.remove('pomo-flash');
+      nextPhase();
+      startPhase();
+    }, 1000);
+  }
+
+  function render() {
+    const now = running ? remaining - (Date.now() - startTime) : remaining;
+    if (now <= 0) {
+      flashAndNext();
+      return;
+    }
+    el.textContent = fmtTime(now);
+    card.dataset.count = String(Math.ceil(now / 1000));
+    if (running) raf = requestAnimationFrame(render);
+  }
+
+  // Config arrows with hold
+  card.querySelectorAll('.pomo-field').forEach(field => {
+    const key = field.dataset.key;
+    field.querySelectorAll('.cd-arrow').forEach(arrow => {
+      const dir = arrow.dataset.dir === 'up' ? 1 : -1;
+      let ht = null, hd;
+      function step() {
+        cfg[key] = Math.max(mins[key], Math.min(maxes[key], cfg[key] + dir));
+        field.querySelector('.pomo-field-val').textContent = cfg[key];
+        card.dataset.pomodoroConfig = JSON.stringify(cfg);
+        if (key === 'cycles') {
+          cyclesEl.innerHTML = buildCycleDotsHTML();
+          updateCycleDots();
+        }
+      }
+      function startH() { hd = 300; step(); (function t() { ht = setTimeout(() => { step(); hd = Math.max(60, hd * 0.8); t(); }, hd); })(); }
+      function stopH() { clearTimeout(ht); ht = null; }
+      arrow.addEventListener('mousedown', startH);
+      arrow.addEventListener('touchstart', e => { e.preventDefault(); startH(); });
+      arrow.addEventListener('mouseup', stopH);
+      arrow.addEventListener('mouseleave', stopH);
+      arrow.addEventListener('touchend', stopH);
+      arrow.addEventListener('touchcancel', stopH);
+    });
+  });
+
+  toggleBtn.addEventListener('click', () => {
+    if (running) {
+      running = false; paused = true;
+      remaining -= (Date.now() - startTime);
+      cancelAnimationFrame(raf);
+      toggleBtn.textContent = '▶';
+      el.textContent = fmtTime(remaining);
+    } else if (paused && remaining > 0) {
+      running = true; startTime = Date.now();
+      toggleBtn.textContent = '⏸';
+      render();
+    } else {
+      phase = 'work'; currentCycle = 0; updateCycleDots();
+      startPhase();
+    }
+  });
+
+  card.querySelector('[data-action="skip"]').addEventListener('click', () => {
+    if (running || paused) {
+      running = false; paused = false; cancelAnimationFrame(raf);
+      nextPhase();
+      startPhase();
+    }
+  });
+
+  card.querySelector('[data-action="reset"]').addEventListener('click', () => {
+    running = false; paused = false; cancelAnimationFrame(raf);
+    toggleBtn.textContent = '▶';
+    phase = 'work'; currentCycle = 0; updateCycleDots();
+    showConfig();
+    el.style.color = accent;
+    card.dataset.count = '0';
+  });
+}
+
+// ── Dice ──
+function buildDice(card, id, accent, opts, handleHTML, labelHTML, nameHTML, bottomHTML) {
+  let mode = opts.diceMode || 'numeric';
+  let faces = opts.diceFaces || 6;
+  let customLabels = opts.diceLabels || ['Oui', 'Non'];
+  let historyNum = [], historyDec = [];
+  let rolling = false;
+  card.dataset.count = '0';
+
+  const diceTypes = [4, 6, 8, 10, 12, 20];
+
+  function facesListHTML() {
+    return customLabels.map((l, i) => `
+      <div class="dice-face-row">
+        <input class="dice-face-input" value="${l}" data-idx="${i}">
+        <button class="dice-face-del" data-idx="${i}" ${customLabels.length <= 2 ? 'disabled' : ''}>×</button>
+      </div>
+    `).join('');
+  }
+
+  card.innerHTML = `
+    ${handleHTML}${labelHTML}
+    ${nameHTML}
+    <div class="dice-tabs">
+      <div class="dice-tab ${mode === 'numeric' ? 'active' : ''}" data-mode="numeric">Numérique</div>
+      <div class="dice-tab ${mode === 'decision' ? 'active' : ''}" data-mode="decision">Décision</div>
+    </div>
+    <div class="dice-mode-panel ${mode === 'numeric' ? 'active' : ''}" data-panel="numeric">
+      <div class="dice-selector">
+        ${diceTypes.map(d => '<div class="dice-type-btn ' + (d === faces ? 'active' : '') + '" data-d="' + d + '">d' + d + '</div>').join('')}
+      </div>
+      <div class="dice-result" id="result-${id}">-</div>
+      <div class="dice-history" id="hist-num-${id}"></div>
+    </div>
+    <div class="dice-mode-panel ${mode === 'decision' ? 'active' : ''}" data-panel="decision">
+      <div class="dice-presets">
+        <div class="cd-preset" data-preset="pf">Pile/Face</div>
+        <div class="cd-preset" data-preset="onp">Oui/Non/Peut-être</div>
+      </div>
+      <div class="dice-faces-list" id="faces-${id}">${facesListHTML()}</div>
+      <div class="buttons" style="margin-bottom:1rem">
+        <button class="btn-xs" data-action="add-face">+ Ajouter une face</button>
+      </div>
+      <div class="dice-result" id="result-dec-${id}">-</div>
+      <div class="dice-history" id="hist-dec-${id}"></div>
+    </div>
+    <div class="buttons">
+      <button class="btn-roll" data-action="roll">Lancer</button>
+    </div>
+    ${bottomHTML}`;
+
+  const resultNum = document.getElementById('result-' + id);
+  const resultDec = document.getElementById('result-dec-' + id);
+  const histNumEl = document.getElementById('hist-num-' + id);
+  const histDecEl = document.getElementById('hist-dec-' + id);
+  const facesListEl = document.getElementById('faces-' + id);
+
+  function saveDiceState() {
+    card.dataset.diceMode = mode;
+    card.dataset.diceFaces = faces;
+    card.dataset.diceLabels = JSON.stringify(customLabels);
+  }
+
+  // Tabs
+  card.querySelectorAll('.dice-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      mode = tab.dataset.mode;
+      card.querySelectorAll('.dice-tab').forEach(t => t.classList.toggle('active', t === tab));
+      card.querySelectorAll('.dice-mode-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === mode));
+      saveDiceState();
+    });
+  });
+
+  // Dice type selector
+  card.querySelectorAll('.dice-type-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      faces = parseInt(btn.dataset.d);
+      card.querySelectorAll('.dice-type-btn').forEach(b => b.classList.toggle('active', b === btn));
+      saveDiceState();
+    });
+  });
+
+  // Face list management
+  function rebuildFaces() {
+    facesListEl.innerHTML = facesListHTML();
+    bindFaceEvents();
+    saveDiceState();
+  }
+
+  function bindFaceEvents() {
+    facesListEl.querySelectorAll('.dice-face-input').forEach(inp => {
+      inp.addEventListener('input', () => {
+        customLabels[parseInt(inp.dataset.idx)] = inp.value;
+        saveDiceState();
+      });
+      inp.addEventListener('mousedown', e => e.stopPropagation());
+    });
+    facesListEl.querySelectorAll('.dice-face-del').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (customLabels.length <= 2) return;
+        customLabels.splice(parseInt(btn.dataset.idx), 1);
+        rebuildFaces();
+      });
+    });
+  }
+  bindFaceEvents();
+
+  card.querySelector('[data-action="add-face"]').addEventListener('click', () => {
+    customLabels.push('');
+    rebuildFaces();
+    const inputs = facesListEl.querySelectorAll('.dice-face-input');
+    inputs[inputs.length - 1].focus();
+  });
+
+  // Presets
+  card.querySelectorAll('.dice-presets .cd-preset').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.dataset.preset === 'pf') customLabels = ['Pile', 'Face'];
+      else customLabels = ['Oui', 'Non', 'Peut-être'];
+      rebuildFaces();
+    });
+  });
+
+  // Roll animation
+  function rollAnimation(getRandomDisplay, getFinal, resultEl, callback) {
+    if (rolling) return;
+    rolling = true;
+    let count = 0;
+    const interval = setInterval(() => {
+      resultEl.textContent = getRandomDisplay();
+      count++;
+      if (count >= 12) {
+        clearInterval(interval);
+        const final = getFinal();
+        resultEl.textContent = final;
+        resultEl.classList.add('bump');
+        setTimeout(() => resultEl.classList.remove('bump'), 200);
+        rolling = false;
+        callback(final);
+      }
+    }, 50);
+  }
+
+  card.querySelector('[data-action="roll"]').addEventListener('click', () => {
+    if (rolling) return;
+    if (mode === 'numeric') {
+      rollAnimation(
+        () => Math.floor(Math.random() * faces) + 1,
+        () => Math.floor(Math.random() * faces) + 1,
+        resultNum,
+        (val) => {
+          historyNum.unshift(val);
+          if (historyNum.length > 5) historyNum.pop();
+          histNumEl.textContent = historyNum.join(' → ');
+          card.dataset.count = String(val);
+        }
+      );
+    } else {
+      const validLabels = customLabels.filter(l => l.trim());
+      if (validLabels.length < 2) return;
+      rollAnimation(
+        () => validLabels[Math.floor(Math.random() * validLabels.length)],
+        () => validLabels[Math.floor(Math.random() * validLabels.length)],
+        resultDec,
+        (val) => {
+          historyDec.unshift(val);
+          if (historyDec.length > 3) historyDec.pop();
+          histDecEl.textContent = historyDec.join(' → ');
+        }
+      );
+    }
+  });
+
+  saveDiceState();
+}
+
+// ── Zone labels ──
+function clearZoneLabels() {
+  document.querySelectorAll('.zone-label').forEach(l => l.remove());
+}
+
+function addZoneLabel(text, x, y) {
+  const lbl = document.createElement('div');
+  lbl.className = 'zone-label';
+  lbl.textContent = text;
+  lbl.style.left = x + 'px';
+  lbl.style.top = y + 'px';
+  document.getElementById('container').appendChild(lbl);
+}
+
+// ── Layouts ──
+function organizeGrid() {
+  saveState(); clearZoneLabels();
+  const cards = document.querySelectorAll('.card');
+  const cols = Math.ceil(Math.sqrt(cards.length));
+  const gapX = 340, gapY = 420;
+  const totalW = cols * gapX;
+  const startX = (window.innerWidth - totalW) / 2;
+  cards.forEach((c, i) => {
+    c.style.left = (startX + (i % cols) * gapX) + 'px';
+    c.style.top = (80 + Math.floor(i / cols) * gapY) + 'px';
+  });
+  setTimeout(updateContainerHeight, 450);
+}
+
+function organizeRow() {
+  saveState(); clearZoneLabels();
+  const cards = document.querySelectorAll('.card');
+  const gap = 320, totalW = cards.length * gap;
+  const sx = Math.max(20, (window.innerWidth - totalW) / 2);
+  const y = (window.innerHeight - 300) / 2;
+  cards.forEach((c, i) => { c.style.left = (sx + i * gap) + 'px'; c.style.top = y + 'px'; });
+  setTimeout(updateContainerHeight, 450);
+}
+
+function organizeStack() {
+  saveState(); clearZoneLabels();
+  const cards = document.querySelectorAll('.card');
+  const cx = (window.innerWidth - 300) / 2;
+  cards.forEach((c, i) => { c.style.left = (cx + i * 20) + 'px'; c.style.top = (80 + i * 25) + 'px'; });
+  setTimeout(updateContainerHeight, 450);
+}
+
+function organizeGrouped() {
+  saveState(); clearZoneLabels();
+
+  const types = ['counter', 'stopwatch', 'countdown', 'pomodoro', 'dice'];
+  const typeLabels = { counter: 'Compteurs', stopwatch: 'Chronomètres', countdown: 'Comptes à rebours', pomodoro: 'Pomodoros', dice: 'Dés' };
+  const groups = {};
+  types.forEach(t => groups[t] = []);
+  document.querySelectorAll('.card').forEach(c => {
+    const t = c.dataset.type;
+    if (groups[t]) groups[t].push(c);
+  });
+
+  // Calculate zones — split viewport into columns per group that has cards
+  const activeTypes = types.filter(t => groups[t].length > 0);
+  if (!activeTypes.length) return;
+
+  const margin = 30;
+  const toolbarH = 65;
+  const zoneWidth = Math.floor((window.innerWidth - margin * (activeTypes.length + 1)) / activeTypes.length);
+  const cardW = 300;
+  const gapY = 420;
+
+  activeTypes.forEach((type, zoneIdx) => {
+    const zoneX = margin + zoneIdx * (zoneWidth + margin);
+    const cards = groups[type];
+    const cols = Math.max(1, Math.floor(zoneWidth / (cardW + 20)));
+    const cardStartX = zoneX + (zoneWidth - Math.min(cards.length, cols) * (cardW + 20)) / 2;
+
+    // Zone label
+    addZoneLabel(typeLabels[type], zoneX + zoneWidth / 2 - 60, toolbarH + 10);
+
+    cards.forEach((c, i) => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      c.style.left = (cardStartX + col * (cardW + 20)) + 'px';
+      c.style.top = (toolbarH + 40 + row * gapY) + 'px';
+    });
+  });
+  setTimeout(updateContainerHeight, 450);
+}
+
+function destroyAll() {
+  const cards = document.querySelectorAll('.card');
+  if (!cards.length) return;
+  saveState(); clearZoneLabels();
+  cards.forEach(c => { if (c._cleanup) c._cleanup(); c.style.animation = 'fadeIn 0.3s ease reverse'; setTimeout(() => c.remove(), 280); });
+  setTimeout(() => { cardId = 0; nextColorIdx = 0; createCard('counter', { skipSave: true }); }, 350);
+}
+
+function resetWorkspace() {
+  const btn = document.getElementById('btn-reset-ws');
+  if (!btn.dataset.confirm) {
+    btn.dataset.confirm = '1';
+    btn.textContent = 'Confirmer ?';
+    btn.style.background = 'rgba(255,80,80,0.5)';
+    setTimeout(() => { delete btn.dataset.confirm; btn.textContent = 'Réinitialiser'; btn.style.background = ''; }, 2000);
+    return;
+  }
+  localStorage.removeItem('workspace');
+  location.reload();
+}
+
+// ── Theme system ──
+let currentTheme = 'violet';
+let isLight = false;
+
+function setTheme(name) {
+  currentTheme = name;
+  document.body.className = `theme-${name}` + (isLight ? ' light' : '');
+  document.querySelectorAll('.theme-swatch').forEach(s => {
+    s.classList.toggle('active', s.dataset.theme === name);
+  });
+  localStorage.setItem('theme', name);
+}
+
+function toggleMode() {
+  isLight = !isLight;
+  document.body.className = `theme-${currentTheme}` + (isLight ? ' light' : '');
+  document.getElementById('mode-toggle').textContent = isLight ? '☀️' : '🌙';
+  localStorage.setItem('lightMode', isLight);
+}
+
+// Restore saved preferences
+(function restoreTheme() {
+  const saved = localStorage.getItem('theme');
+  const savedMode = localStorage.getItem('lightMode');
+  if (saved) setTheme(saved);
+  if (savedMode === 'true') toggleMode();
+})();
+
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); }
+});
+
+if (!loadWorkspace()) {
+  createCard('counter', { skipSave: true });
+}
+
+// ── Onboarding tooltip ──
+(function onboard() {
+  if (localStorage.getItem('onboarded')) return;
+  const firstCard = document.querySelector('.card');
+  if (!firstCard) return;
+  const tip = document.createElement('div');
+  tip.className = 'onboard-tip';
+  tip.textContent = 'Glisse les cartes pour les réorganiser';
+  document.getElementById('container').appendChild(tip);
+  function positionTip() {
+    tip.style.left = firstCard.offsetLeft + 'px';
+    tip.style.top = (firstCard.offsetTop - 44) + 'px';
+  }
+  positionTip();
+  function dismiss() {
+    tip.style.opacity = '0';
+    tip.style.transition = 'opacity 0.3s';
+    setTimeout(() => tip.remove(), 300);
+    localStorage.setItem('onboarded', '1');
+    document.removeEventListener('mousedown', onDrag);
+    document.removeEventListener('touchstart', onDrag);
+  }
+  function onDrag(e) {
+    if (e.target.closest('.drag-handle')) dismiss();
+  }
+  document.addEventListener('mousedown', onDrag);
+  document.addEventListener('touchstart', onDrag);
+  setTimeout(dismiss, 4000);
+})();
+</script>
+</body>
+</html>

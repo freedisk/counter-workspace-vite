@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Compteur</title>
+</head>
+<body>
+
+<div class="toolbar">
+  <div class="toolbar-dropdown" id="dd-layout">
+    <button onclick="toggleDropdown('dd-layout')">Disposition ▾</button>
+    <div class="toolbar-dropdown-menu">
+      <button onclick="organizeGrid(); closeDropdowns()">Grille</button>
+      <button onclick="organizeRow(); closeDropdowns()">Ligne</button>
+      <button onclick="organizeStack(); closeDropdowns()">Empiler</button>
+      <button onclick="organizeGrouped(); closeDropdowns()">Grouper</button>
+    </div>
+  </div>
+  <div class="toolbar-dropdown" id="dd-add">
+    <button onclick="toggleDropdown('dd-add')">Ajouter ▾</button>
+    <div class="toolbar-dropdown-menu">
+      <button onclick="createCard('counter'); closeDropdowns()">Compteur</button>
+      <button onclick="createCard('stopwatch'); closeDropdowns()">Chrono</button>
+      <button onclick="createCard('countdown'); closeDropdowns()">Rebours</button>
+      <button onclick="createCard('pomodoro'); closeDropdowns()">Pomodoro</button>
+      <button onclick="createCard('dice'); closeDropdowns()">Dé</button>
+      <button onclick="createCard('timer'); closeDropdowns()">Timer</button>
+    </div>
+  </div>
+  <div class="sep"></div>
+  <button class="btn-undo" id="btn-undo" onclick="undo()" disabled>Annuler</button>
+  <button class="btn-danger" onclick="destroyAll()">Tout supprimer</button>
+  <button class="btn-danger" id="btn-reset-ws" onclick="resetWorkspace()">Réinitialiser</button>
+  <span class="spacer"></span>
+  <div class="theme-bar">
+    <div class="theme-swatch active" data-theme="violet" title="Violet" onclick="setTheme('violet')"></div>
+    <div class="theme-swatch" data-theme="ocean" title="Océan" onclick="setTheme('ocean')"></div>
+    <div class="theme-swatch" data-theme="sunset" title="Crépuscule" onclick="setTheme('sunset')"></div>
+    <div class="theme-swatch" data-theme="forest" title="Forêt" onclick="setTheme('forest')"></div>
+    <div class="mode-toggle" id="mode-toggle" onclick="toggleMode()" title="Clair / Sombre">🌙</div>
+  </div>
+</div>
+
+<div id="container" role="application"></div>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
