@@ -14,6 +14,7 @@ import buildCountdown from './cards/countdown.js';
 import buildPomodoro from './cards/pomodoro.js';
 import buildDice from './cards/dice.js';
 import buildTimer from './cards/timer.js';
+import buildWorkout from './cards/workout.js';
 
 // ── State ──
 let nextColorIdx = 0;
@@ -62,7 +63,7 @@ function createCard(type, opts = {}) {
   if (opts.width) card.style.width = opts.width;
   if (opts.height) card.style.height = opts.height;
 
-  const labels = { counter: 'Compteur', stopwatch: 'Chronomètre', countdown: 'Rebours', pomodoro: 'Pomodoro', dice: 'Dé', timer: 'Timer' };
+  const labels = { counter: 'Compteur', stopwatch: 'Chronomètre', countdown: 'Rebours', pomodoro: 'Pomodoro', dice: 'Dé', timer: 'Timer', workout: 'Workout' };
 
   const { handleHTML, labelHTML, nameHTML, bottomHTML } = buildCardShell({ card, id, type, accent, opts, nextColorIdx });
 
@@ -74,6 +75,7 @@ function createCard(type, opts = {}) {
   else if (type === 'pomodoro') buildPomodoro(card, id, accent, opts, handleHTML, labelHTML, nameHTML, bottomHTML);
   else if (type === 'dice') buildDice(card, id, accent, opts, handleHTML, labelHTML, nameHTML, bottomHTML);
   else if (type === 'timer') buildTimer(card, id, accent, opts, handleHTML, labelHTML, nameHTML, bottomHTML);
+  else if (type === 'workout') buildWorkout(card, id, accent, opts, handleHTML, labelHTML, nameHTML, bottomHTML);
 
   bindDrag(card);
   bindResize(card);

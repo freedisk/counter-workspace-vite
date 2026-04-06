@@ -64,8 +64,8 @@ export function organizeStack() {
 export function organizeGrouped() {
   saveState(); clearZoneLabels();
 
-  const types = ['counter', 'stopwatch', 'countdown', 'pomodoro', 'dice', 'timer'];
-  const typeLabels = { counter: 'Compteurs', stopwatch: 'Chronomètres', countdown: 'Comptes à rebours', pomodoro: 'Pomodoros', dice: 'Dés', timer: 'Timers' };
+  const types = ['counter', 'stopwatch', 'countdown', 'pomodoro', 'dice', 'timer', 'workout'];
+  const typeLabels = { counter: 'Compteurs', stopwatch: 'Chronomètres', countdown: 'Comptes à rebours', pomodoro: 'Pomodoros', dice: 'Dés', timer: 'Timers', workout: 'Workouts' };
   const groups = {};
   types.forEach(t => groups[t] = []);
   document.querySelectorAll('.card').forEach(c => {

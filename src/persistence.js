@@ -47,6 +47,8 @@ export function saveState() {
       entry.diceLabels = c.dataset.diceLabels ? JSON.parse(c.dataset.diceLabels) : [];
     }
     if (c.dataset.hotkey) entry.hotkey = c.dataset.hotkey;
+    if (c.dataset.workoutConfig) entry.workoutConfig = JSON.parse(c.dataset.workoutConfig);
+    if (c.dataset.workoutSets) entry.workoutSets = JSON.parse(c.dataset.workoutSets);
     snap.push(entry);
   });
   undoStack.push(snap);
@@ -71,6 +73,8 @@ export function undo() {
     if (s.pomodoroConfig) opts.pomodoroConfig = s.pomodoroConfig;
     if (s.diceMode) { opts.diceMode = s.diceMode; opts.diceFaces = s.diceFaces; opts.diceLabels = s.diceLabels; }
     if (s.hotkey) opts.hotkey = s.hotkey;
+    if (s.workoutConfig) opts.workoutConfig = s.workoutConfig;
+    if (s.workoutSets) opts.workoutSets = s.workoutSets;
     _createCard(s.type, opts);
   });
   updateContainerHeight();
@@ -107,6 +111,10 @@ export function saveWorkspace() {
       entry.diceLabels = c.dataset.diceLabels ? JSON.parse(c.dataset.diceLabels) : ['Oui', 'Non'];
     }
     if (c.dataset.hotkey) entry.hotkey = c.dataset.hotkey;
+    if (c.dataset.type === 'workout') {
+      if (c.dataset.workoutConfig) entry.workoutConfig = JSON.parse(c.dataset.workoutConfig);
+      if (c.dataset.workoutSets) entry.workoutSets = JSON.parse(c.dataset.workoutSets);
+    }
     data.cards.push(entry);
   });
   localStorage.setItem('workspace', JSON.stringify(data));
@@ -134,6 +142,8 @@ export function loadWorkspace() {
       if (s.pomodoroConfig) opts.pomodoroConfig = s.pomodoroConfig;
       if (s.diceMode) { opts.diceMode = s.diceMode; opts.diceFaces = s.diceFaces; opts.diceLabels = s.diceLabels; }
       if (s.hotkey) opts.hotkey = s.hotkey;
+      if (s.workoutConfig) opts.workoutConfig = s.workoutConfig;
+      if (s.workoutSets) opts.workoutSets = s.workoutSets;
       _createCard(s.type, opts);
     });
     return true;

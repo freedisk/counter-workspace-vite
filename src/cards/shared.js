@@ -26,8 +26,8 @@ export function bindRemove(card) {
 }
 
 export function buildCardShell({ card, id, type, accent, opts, nextColorIdx }) {
-  const labels = { counter: 'Compteur', stopwatch: 'Chronomètre', countdown: 'Rebours', pomodoro: 'Pomodoro', dice: 'Dé', timer: 'Timer' };
-  const placeholders = { counter: 'Nom du compteur…', stopwatch: 'Nom du chrono…', countdown: 'Nom du rebours…', pomodoro: 'Nom du pomodoro…', dice: 'Nom du dé…', timer: 'Nom du timer…' };
+  const labels = { counter: 'Compteur', stopwatch: 'Chronomètre', countdown: 'Rebours', pomodoro: 'Pomodoro', dice: 'Dé', timer: 'Timer', workout: 'Workout' };
+  const placeholders = { counter: 'Nom du compteur…', stopwatch: 'Nom du chrono…', countdown: 'Nom du rebours…', pomodoro: 'Nom du pomodoro…', dice: 'Nom du dé…', timer: 'Nom du timer…', workout: 'Nom de l\'exercice…' };
 
   const handleHTML = `<div class="drag-handle" aria-label="Déplacer la carte"><span></span><span></span><span></span><span></span><span></span><span></span></div>`;
   const labelHTML = `<span class="card-type-label">${labels[type]}</span>`;
